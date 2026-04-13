@@ -6,74 +6,10 @@
 
 ## Проект
 
-**Назва:** test_vite
-**Тип:** React SPA (Single Page Application)
-**Середовище:** Node.js / браузер
-**React:** 18
-**TypeScript:** 5.x
-**Vite:** 6.x
-
----
-
-## Конфігурація
-
-### vite.config.ts
-
-```ts
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
-
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-});
-```
-
-### tsconfig.app.json (ключові параметри)
-
-```json
-{
-  "compilerOptions": {
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true
-  }
-}
-```
-
----
-
-## Залежності
-
-### dependencies (package.json)
-
-```json
-{
-  "react": "^18.x",
-  "react-dom": "^18.x",
-  "react-router-dom": "^6.x",
-  "@tanstack/react-query": "^5.x"
-}
-```
-
-### devDependencies
-
-```json
-{
-  "typescript": "^5.x",
-  "vite": "^6.x",
-  "@vitejs/plugin-react": "^4.x",
-  "tailwindcss": "^4.x",
-  "@tailwindcss/vite": "^4.x",
-  "eslint": "^9.x",
-  "prettier": "^3.x",
-  "@typescript-eslint/eslint-plugin": "^8.x",
-  "@typescript-eslint/parser": "^8.x",
-  "eslint-config-prettier": "^9.x",
-  "eslint-plugin-react-hooks": "^5.x",
-  "eslint-plugin-react-refresh": "^0.4.x"
-}
-```
+**Назва:** test_vite — Orders Dashboard
+**Тип:** React SPA
+**React:** 18 + TypeScript 5
+**Vite:** 6
 
 ---
 
@@ -105,193 +41,232 @@ createRoot(document.getElementById('root')!).render(
 ## Роутинг — App.tsx
 
 ```tsx
-import { Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import NotFoundPage from './pages/NotFoundPage';
+// Перемикач між двома версіями сторінок
+const USE_V1 = true; // true = навчальна версія, false = основна
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/orders"
+        element={USE_V1 ? <OrdersPage1 /> : <OrdersPage />} />
+      <Route path="/orders/:id"
+        element={USE_V1 ? <OrderDetailPage1 /> : <OrderDetailPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
-
-export default App;
 ```
 
 ---
 
-## Структура src/
+## Типи (`src/types/order.ts`)
 
-```
-src/
-├── assets/
-├── components/
-│   └── ui/
-├── hooks/
-├── pages/
-│   ├── HomePage.tsx
-│   └── NotFoundPage.tsx
-├── services/
-│   └── api.ts
-├── store/
-├── types/
-├── utils/
-├── App.tsx
-├── main.tsx
-└── index.css        ← @import "tailwindcss";
+```ts
+export type OrderStatus =
+  | 'new' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
+export interface Order {
+  id: string;
+  date: string;           // ISO 8601
+  customerName: string;
+  total: number;
+  status: OrderStatus;
+}
+
+export interface OrderItem {
+  id: string;
+  title: string;
+  qty: number;
+  price: number;
+}
+
+export interface Customer {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+}
+
+export interface OrderDetail {
+  id: string;
+  date: string;
+  status: OrderStatus;
+  customer: Customer;
+  items: OrderItem[];
+  total: number;
+}
+
+export interface TopCustomer {
+  name: string;
+  total: number;
+  ordersCount: number;
+}
+
+export interface TopProduct {
+  title: string;
+  qty: number;
+  revenue: number;
+}
 ```
 
 ---
 
-## Типові патерни
-
-### Сервіс (src/services/)
+## Сервіс (`src/services/orderService.ts`)
 
 ```ts
-// src/services/userService.ts
-const BASE_URL = import.meta.env.VITE_API_URL ?? '';
+// Імпорт JSON як mock API
+import ordersData from '../data/orders.json';
+import orderDetailsData from '../data/orderDetails.json';
 
-export async function getUsers(): Promise<User[]> {
-  const res = await fetch(`${BASE_URL}/api/users`);
-  if (!res.ok) throw new Error('Failed to fetch users');
-  return res.json();
-}
+const orders = ordersData as Order[];
+const orderDetails = orderDetailsData as OrderDetail[];
 
-export async function createUser(
-  data: CreateUserPayload,
-): Promise<User> {
-  const res = await fetch(`${BASE_URL}/api/users`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to create user');
-  return res.json();
-}
+// Імітація затримки мережі
+const delay = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+export async function getOrders(): Promise<Order[]>
+export async function getOrderById(id: string): Promise<OrderDetail>
+export async function getAllOrderDetails(): Promise<OrderDetail[]>
 ```
 
-### Хук з useQuery
+---
 
+## Хуки
+
+### useOrders.ts
 ```ts
-// src/hooks/useUsers.ts
-import { useQuery } from '@tanstack/react-query';
-import { getUsers } from '../services/userService';
-
-export function useUsers() {
+export function useOrders() {
   return useQuery({
-    queryKey: ['users'],
-    queryFn: getUsers,
+    queryKey: ['orders'],
+    queryFn: getOrders,
   });
 }
 ```
 
-### Хук з useMutation
-
+### useOrderDetail.ts
 ```ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createUser } from '../services/userService';
+// Деталі одного замовлення
+export function useOrderDetail(id: string) {
+  return useQuery({
+    queryKey: ['orders', id],
+    queryFn: () => getOrderById(id),
+  });
+}
 
-export function useCreateUser() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: createUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
+// Всі деталі (для KPI на HomePage)
+export function useOrderDetails() {
+  return useQuery({
+    queryKey: ['orderDetails'],
+    queryFn: getAllOrderDetails,
   });
 }
 ```
 
-### Типи (src/types/)
+---
 
-```ts
-// src/types/user.ts
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-}
+## Компоненти
 
-export interface CreateUserPayload {
-  name: string;
-  email: string;
-}
-
-export type UserStatus = 'active' | 'inactive' | 'pending';
-```
-
-### Сторінка
-
+### PageState.tsx
 ```tsx
-// src/pages/UsersPage.tsx
-import { useUsers } from '../hooks/useUsers';
-
-function UsersPage() {
-  const { data, isLoading, isError } = useUsers();
-
-  if (isLoading) {
-    return <p className="text-gray-500">Завантаження...</p>;
-  }
-
-  if (isError) {
-    return (
-      <p className="text-red-600">Помилка завантаження даних</p>
-    );
-  }
-
-  return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Користувачі</h1>
-      <ul className="space-y-2">
-        {data?.map((user) => (
-          <li key={user.id} className="p-2 border rounded">
-            {user.name}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+interface PageStateProps {
+  isLoading?: boolean;
+  isError?: boolean;
+  isEmpty?: boolean;
+  loadingText?: string;  // дефолт: 'Завантаження...'
+  errorText?: string;    // дефолт: 'Помилка завантаження'
+  emptyText?: string;    // дефолт: 'Даних немає'
 }
+// Показує спінер / помилку з ⚠️ / порожній стан з 📭
+```
 
-export default UsersPage;
+### BackButton.tsx
+```tsx
+interface BackButtonProps {
+  to?: string;           // якщо не передано — navigate(-1)
+  label?: string;        // дефолт: '← Назад'
+}
+```
+
+### Pagination.tsx
+```tsx
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}
+// Показується тільки якщо totalPages > 1
+```
+
+### SearchInput.tsx
+```tsx
+interface SearchInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;    // наприклад 'flex-1'
+}
+// Кнопка ✕ Скинути з'являється коли є текст
+```
+
+### StatusFilter.tsx
+```tsx
+interface StatusFilterProps {
+  value: string;         // '' = всі статуси
+  onChange: (value: string) => void;
+}
+// <select> з опціями: всі/new/processing/shipped/delivered/cancelled
+```
+
+### SortControl.tsx
+```tsx
+interface SortControlProps {
+  field: 'date' | 'total';
+  order: 'asc' | 'desc';
+  onFieldChange: (field: 'date' | 'total') => void;
+  onOrderChange: (order: 'asc' | 'desc') => void;
+}
+// <select> для поля + кнопка toggle для напрямку
+```
+
+### TableRowNumber.tsx
+```tsx
+interface TableRowNumberProps {
+  index: number;  // index з .map() — відображає index + 1
+}
+// Повертає <td> з порядковим номером
 ```
 
 ---
 
-## ESLint конфігурація (eslint.config.js)
+## Сторінки
 
-Проект використовує ESLint 9 flat config + Prettier.
-Правила визначені в `eslint.config.js` у корені проекту.
+### HomePage.tsx
+- KPI: кількість замовлень, унікальні клієнти, загальний оборот
+- Навігаційні картки: до списку замовлень, до останнього замовлення
+- Топ-5 клієнтів по сумі
+- Топ-5 товарів по виручці
+- Останнє замовлення — розраховується по найпізнішій даті + більшому ID
 
-## Prettier конфігурація (.prettierrc)
+### OrdersPage.tsx / OrdersPage1.tsx
+- Таблиця: №, ID, Дата, Клієнт, Вартість, Статус
+- Фільтр по ID/імені клієнта (`SearchInput`)
+- Фільтр по статусу (`StatusFilter`)
+- Сортування по даті або сумі (`SortControl`)
+- Пагінація 10 на сторінку (`Pagination`) — сторінка в URL
+- Клік по рядку → `/orders/:id`
 
-```json
-{
-  "printWidth": 80,
-  "tabWidth": 2,
-  "semi": true,
-  "singleQuote": true,
-  "trailingComma": "all",
-  "bracketSpacing": true,
-  "arrowParens": "always"
-}
-```
-
----
-
-## npm скрипти
-
-```bash
-npm run dev       # Vite dev сервер (localhost:5173)
-npm run build     # TypeScript + Vite production збірка
-npm run preview   # Прев'ю production збірки
-npm run lint      # ESLint перевірка
-npm run format    # Prettier форматування всього src/
-```
+### OrderDetailPage.tsx / OrderDetailPage1.tsx
+- Заголовок: `Замовлення #ID` + бейдж статусу
+- Блок клієнта: ім'я, email, телефон, адреса
+- Блок замовлення: дата, сума (розрахована з items)
+- Попередження якщо `grandTotal !== order.total`
+- Таблиця товарів: назва, кількість, ціна, сума
+- `tfoot` з Grand Total
+- Кнопки: `← До списку замовлень` (navigate(-1)), `На головну`
 
 ---
 
@@ -299,9 +274,23 @@ npm run format    # Prettier форматування всього src/
 
 | Неправильно | Правильно |
 |-------------|-----------|
-| `any` тип | `unknown` або конкретний тип |
-| Прямий `fetch` у компоненті | Виносити в `services/` + хук |
-| Стан сервера в `useState` | `useQuery` / `useMutation` |
-| Бізнес-логіка у JSX | Виносити у хук або utils |
-| Імпорт з відносного шляху `../../` | Налаштувати path alias `@/` |
-| `console.log` у production коді | Видаляти або використовувати logger |
+| `useState` для пагінації | `useSearchParams` — зберігає при поверненні |
+| `navigate('/orders')` з деталей | `navigate(-1)` — повертає на ту саму сторінку |
+| `setSearchParams({ page })` | `setSearchParams({ ...Object.fromEntries(searchParams), page })` |
+| `useEffect` для скидання сторінки | Скидати в handlers: `setCurrentPage(1)` |
+| `any` тип для `order.status` | `order.status as OrderStatus` + імпорт типу |
+| `.map()` всередині `<td>` | `.map()` тільки на рівні `<tr>` в `<tbody>` |
+| Хуки після `if` умов | Всі хуки завжди перед першим `if` або `return` |
+| `border-r-2` без `border-gray-200` | Завжди додавати колір межі інакше бере колір тексту |
+
+---
+
+## npm скрипти
+
+```bash
+npm run dev       # Vite dev сервер → localhost:5173
+npm run build     # TypeScript + production збірка
+npm run preview   # Прев'ю production збірки
+npm run lint      # ESLint перевірка
+npm run format    # Prettier форматування src/
+```

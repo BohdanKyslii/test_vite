@@ -7,30 +7,31 @@
 
 ## 1. Огляд проекту
 
-**test_vite** — React SPA проект.
-
-> TODO: Опиши призначення проекту тут.
+**test_vite** — React SPA для перегляду та управління замовленнями
+(Orders Dashboard). Тестове завдання.
 
 **Сторінки:**
 
-| Сторінка | URL    | Призначення          |
-|----------|--------|----------------------|
-| Home     | `/`    | Головна сторінка     |
-| 404      | `*`    | Сторінка не знайдена |
+| Сторінка       | URL            | Призначення                          |
+|----------------|----------------|--------------------------------------|
+| Home           | `/`            | Дашборд — KPI, топ клієнти/товари   |
+| Orders         | `/orders`      | Список замовлень з фільтрами         |
+| Order Detail   | `/orders/:id`  | Деталі замовлення                    |
+| 404            | `*`            | Сторінка не знайдена                 |
 
 ---
 
 ## 2. Tech Stack
 
-| Компонент     | Технологія                        |
-|---------------|-----------------------------------|
-| Framework     | React 18 + TypeScript             |
-| Routing       | React Router v6                   |
-| State/Data    | TanStack React Query v5           |
-| Стилізація    | Tailwind CSS v4                   |
-| Збірка        | Vite 6                            |
-| Лінтер        | ESLint + Prettier                 |
-| Менеджер пакетів | npm                            |
+| Компонент        | Технологія                  |
+|------------------|-----------------------------|
+| Framework        | React 18 + TypeScript 5     |
+| Routing          | React Router v6             |
+| State/Data       | TanStack React Query v5     |
+| Стилізація       | Tailwind CSS v4             |
+| Збірка           | Vite 6                      |
+| Лінтер           | ESLint + Prettier           |
+| Менеджер пакетів | npm                         |
 
 ---
 
@@ -38,201 +39,255 @@
 
 ```
 src/
-├── assets/          # Зображення, шрифти, статика
-├── components/      # Перевикористовувані компоненти
-│   └── ui/          # Базові UI елементи (Button, Input, Modal)
-├── pages/           # Сторінки (HomePage, NotFoundPage)
-├── hooks/           # Кастомні хуки (useAuth, useFetch)
-├── services/        # API запити (api.ts, userService.ts)
-├── store/           # React Query клієнт, глобальний стан
-├── types/           # TypeScript інтерфейси та типи
-├── utils/           # Допоміжні функції
-├── App.tsx          # Роутинг
-├── main.tsx         # Точка входу, провайдери
-└── index.css        # Tailwind імпорт
+├── components/          # Перевикористовувані компоненти
+│   ├── ui/
+│   │   └── Text.tsx     # TEXT константи стилів
+│   ├── BackButton.tsx   # Кнопка повернення
+│   ├── PageState.tsx    # Стани loading/error/empty
+│   ├── Pagination.tsx   # Пагінація
+│   ├── SearchInput.tsx  # Поле пошуку з кнопкою скидання
+│   ├── StatusFilter.tsx # Фільтр по статусу
+│   ├── SortControl.tsx  # Сортування поле + напрямок
+│   └── TableRowNumber.tsx # Нумерація рядків таблиці
+├── data/
+│   ├── orders.json          # Mock дані — список замовлень
+│   └── orderDetails.json    # Mock дані — деталі замовлень
+├── hooks/
+│   ├── useOrders.ts         # useQuery для списку замовлень
+│   └── useOrderDetail.ts    # useQuery для деталей + всіх деталей
+├── pages/
+│   ├── HomePage.tsx         # Дашборд з KPI і топами
+│   ├── OrdersPage.tsx       # Список замовлень
+│   ├── OrderDetailPage.tsx  # Деталі замовлення
+│   └── NotFoundPage.tsx     # 404
+├── services/
+│   └── orderService.ts      # Функції отримання даних з JSON
+├── types/
+│   └── order.ts             # TypeScript типи та інтерфейси
+├── utils/
+│   ├── orderUtils.ts        # Форматування, KPI розрахунки, стилі статусів
+│   └── typography.ts        # TEXT константи (альтернативне розташування)
+├── App.tsx                  # Роутинг + перемикач USE_V1
+├── main.tsx                 # Точка входу, провайдери
+└── index.css                # @import "tailwindcss"
 ```
 
 ---
 
-## 4. Архітектура даних
+## 4. Mock API
 
-### React Query — серверний стан
+Дані зберігаються в `src/data/` і імпортуються через `src/services/orderService.ts`.
 
-Всі дані з API керуються через React Query:
-- `useQuery` — отримання даних (GET)
-- `useMutation` — зміна даних (POST/PUT/DELETE)
-- `queryClient.invalidateQueries` — інвалідація після мутацій
+**Доступні ендпоінти (mock):**
 
-### Локальний стан
+| Функція              | Опис                              |
+|----------------------|-----------------------------------|
+| `getOrders()`        | Список всіх замовлень             |
+| `getOrderById(id)`   | Деталі замовлення по ID           |
+| `getAllOrderDetails()`| Всі деталі (для KPI розрахунків)  |
 
-- `useState` — стан компонента
-- `useReducer` — складний локальний стан
+Всі функції `async` з імітацією затримки через `delay()` — легко замінити на реальний `fetch`.
 
 ---
 
-## 5. API та сервіси
-
-Всі запити до API знаходяться в `src/services/`.
-
-**Базовий URL:** визначається в `src/services/api.ts`
+## 5. Типи даних (`src/types/order.ts`)
 
 ```ts
-// src/services/api.ts
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+type OrderStatus =
+  'new' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
 
-export const api = {
-  get: (url: string) => fetch(`${BASE_URL}${url}`),
-  post: (url: string, data: unknown) =>
-    fetch(`${BASE_URL}${url}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }),
-}
+interface Order          // рядок в таблиці замовлень
+interface OrderDetail    // повні деталі замовлення
+interface OrderItem      // товар в замовленні
+interface Customer       // інформація про клієнта
+interface TopCustomer    // для KPI топ клієнтів
+interface TopProduct     // для KPI топ товарів
 ```
 
 ---
 
-## 6. Стиль коду
+## 6. Утиліти (`src/utils/orderUtils.ts`)
 
-### TypeScript
+### Форматування
 
-- Завжди визначати типи для props компонентів
-- Використовувати `interface` для об'єктів, `type` для union/alias
-- Уникати `any` — використовувати `unknown` якщо тип невідомий
-- Експортувати типи з `src/types/`
+| Функція                   | Опис                          | Приклад               |
+|---------------------------|-------------------------------|-----------------------|
+| `formatDate(str)`         | ISO → локальна дата           | `"02.01.2026"`        |
+| `formatCurrency(n)`       | Число → валюта                | `"7 340 ₴"`           |
+| `formatCurrencyDecimal(n)`| Число → валюта з копійками    | `"7 340,00"`          |
+| `formatNumber(n)`         | Ціле число з розділювачем     | `"7 340"`             |
+| `getStatusClasses(status)`| Статус → Tailwind класи       | `"bg-yellow-100 ..."`  |
 
-### React компоненти
+### KPI розрахунки
 
-- Функціональні компоненти з arrow function або `function`
-- Props — окремий `interface` вище компонента
-- Один компонент — один файл
-- Назва файлу = назва компонента (PascalCase)
-
-### Файли та іменування
-
-| Тип              | Конвенція        | Приклад               |
-|------------------|------------------|-----------------------|
-| Компонент        | PascalCase       | `UserCard.tsx`        |
-| Хук              | camelCase        | `useUserData.ts`      |
-| Сервіс           | camelCase        | `userService.ts`      |
-| Тип/Інтерфейс    | PascalCase       | `User`, `ApiResponse` |
-| Константа        | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT`     |
-| CSS клас         | Tailwind утиліти | `className="flex..."`  |
-
-### Форматування (Prettier)
-
-- Максимальна довжина рядка: **80 символів**
-- Відступ: **2 пробіли**
-- Крапка з комою: **так**
-- Лапки: **одинарні** (`'`)
-- Trailing comma: **all**
+| Функція                    | Опис                          |
+|----------------------------|-------------------------------|
+| `calcTotalOrders(orders)`  | Кількість замовлень           |
+| `calcUniqueCustomers(orders)` | Унікальні клієнти          |
+| `calcGrandTotal(orders)`   | Загальна сума                 |
+| `calcTopCustomers(orders)` | Топ-5 клієнтів по сумі        |
+| `calcTopProducts(details)` | Топ-5 товарів по виручці      |
 
 ---
 
-## 7. Компонентні патерни
+## 7. Стилізація
 
-### Базовий компонент
+### TEXT константи (`src/components/ui/Text.tsx`)
 
-```tsx
-interface ButtonProps {
-  label: string;
-  onClick: () => void;
-  variant?: 'primary' | 'secondary';
-}
-
-function Button({ label, onClick, variant = 'primary' }: ButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 rounded ${
-        variant === 'primary'
-          ? 'bg-blue-600 text-white'
-          : 'bg-gray-200 text-gray-800'
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-export default Button;
-```
-
-### Компонент з React Query
-
-```tsx
-import { useQuery } from '@tanstack/react-query';
-
-function UserList() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['users'],
-    queryFn: () =>
-      fetch('/api/users').then((res) => res.json()),
-  });
-
-  if (isLoading) return <p>Завантаження...</p>;
-  if (isError) return <p>Помилка завантаження</p>;
-
-  return (
-    <ul>
-      {data.map((user) => (
-        <li key={user.id}>{user.name}</li>
-      ))}
-    </ul>
-  );
-}
-```
-
-### Кастомний хук
+Tailwind класи згруповані в об'єкт `TEXT` для повторного використання:
 
 ```ts
-// src/hooks/useUsers.ts
-import { useQuery } from '@tanstack/react-query';
-
-export function useUsers() {
-  return useQuery({
-    queryKey: ['users'],
-    queryFn: () =>
-      fetch('/api/users').then((res) => res.json()),
-  });
-}
+TEXT.pageTitle     // заголовок сторінки h1
+TEXT.sectionTitle  // підзаголовок h2
+TEXT.Div           // обгортка таблиці/картки
+TEXT.Table         // таблиця
+TEXT.Tr            // рядок шапки таблиці
+TEXT.Header        // комірка шапки th
+TEXT.Id            // комірка ID
+TEXT.Text          // звичайний текст td
+TEXT.Date          // дата td
+TEXT.Amount        // сума td
+TEXT.badge         // бейдж статусу
+TEXT.button        // кнопка
+TEXT.loading       // текст завантаження
+TEXT.error         // текст помилки
+TEXT.empty         // текст порожнього стану
+TEXT.label         // підпис над полем
+TEXT.filter        // стиль інпуту/select фільтра
+TEXT.title_kpi     // картка KPI обгортка
+TEXT.text_kpi      // назва KPI
+TEXT.indicator_kpi // значення KPI
 ```
 
----
+### Правила стилізації
 
-## 8. Роутинг
-
-Роутинг налаштований у `src/App.tsx` через React Router v6:
+```
+TEXT містить    — типографіку, кольори, форму
+Сторінка додає — padding, margin, border, вирівнювання
+```
 
 ```tsx
-import { Routes, Route } from 'react-router-dom';
-
-function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  );
-}
+// padding і border окремо від TEXT
+<td className={`p-3 ${TEXT.Id} border-r`}>
+// відступи заголовку окремо
+<h1 className={`${TEXT.pageTitle} mb-2`}>
 ```
 
-Нові сторінки — додавати в `src/pages/` та реєструвати в `App.tsx`.
+### Порядок Tailwind класів
+
+```
+Layout → Spacing → Sizing → Typography → Colors → Effects → States
+flex     p-4       w-full   text-sm     text-gray  border    hover:
+```
 
 ---
 
-## 9. Змінні середовища
+## 8. Компоненти
 
-Файл `.env` у кореневій директорії проекту:
+### PageState — стани сторінки
 
+```tsx
+<PageState
+  isLoading={isLoading}
+  isError={isError}
+  isEmpty={!data}
+  loadingText="Завантаження..."    // необов'язково
+  errorText="Помилка"              // необов'язково
+  emptyText="Даних немає"          // необов'язково
+/>
 ```
-VITE_API_URL=http://localhost:8000
+
+### BackButton — кнопка повернення
+
+```tsx
+<BackButton />                                    // navigate(-1)
+<BackButton to="/orders" label="← До списку" />  // конкретний шлях
 ```
 
-Доступ у коді: `import.meta.env.VITE_API_URL`
+### Pagination — пагінація
 
-> Всі змінні для Vite мають починатись з `VITE_`
+```tsx
+<Pagination
+  currentPage={currentPage}
+  totalPages={totalPages}
+  totalItems={sortedData.length}
+  pageSize={PAGE_SIZE}
+  onPageChange={setCurrentPage}
+/>
+```
+
+### SearchInput — пошук
+
+```tsx
+<SearchInput
+  value={search}
+  onChange={handleSearch}
+  placeholder="Пошук..."
+  className="flex-1"    // необов'язково
+/>
+```
+
+### StatusFilter, SortControl, TableRowNumber
+
+```tsx
+<StatusFilter value={statusFilter} onChange={handleStatus} />
+<SortControl field={sortField} order={sortOrder}
+  onFieldChange={setSortField} onOrderChange={setSortOrder} />
+<TableRowNumber index={index} />
+```
+
+---
+
+## 9. Патерни сторінок
+
+### Порядок хуків у компоненті
+
+```tsx
+function Page() {
+  // 1. Дані з сервера
+  const { data, isLoading, isError } = useOrders();
+  // 2. Навігація
+  const navigate = useNavigate();
+  // 3. URL стан (пагінація)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = Number(searchParams.get('page') ?? '1');
+  // 4. Локальний стан (фільтри, сортування)
+  const [search, setSearch] = useState('');
+  // 5. Refs
+  const isFirstRender = useRef(true);
+  // 6. Effects
+  useEffect(() => { ... }, [deps]);
+  // 7. Перевірки станів
+  if (isLoading || isError || !data) return <PageState ... />;
+  // 8. Обчислення (filter, sort, paginate)
+  // 9. return JSX
+}
+```
+
+### Пагінація з URL
+
+```tsx
+const [searchParams, setSearchParams] = useSearchParams();
+const currentPage = Number(searchParams.get('page') ?? '1');
+const setCurrentPage = (page: number) => {
+  setSearchParams({
+    ...Object.fromEntries(searchParams),
+    page: String(page),
+  });
+};
+```
+
+### Фільтрація + Сортування + Пагінація
+
+```tsx
+const filteredData = data.filter(...);
+const sortedData = filteredData.slice().sort(...);
+const totalPages = Math.ceil(sortedData.length / PAGE_SIZE);
+const pageData = sortedData.slice(
+  (currentPage - 1) * PAGE_SIZE,
+  currentPage * PAGE_SIZE,
+);
+```
 
 ---
 
@@ -244,21 +299,16 @@ VITE_API_URL=http://localhost:8000
 
 **Коміти (Conventional Commits):**
 ```
-feat(components): add UserCard component
-fix(api): handle 404 response correctly
-refactor(hooks): extract useUsers hook
-docs: update task description
+feat(pages): add order detail page
+fix(pagination): preserve page on back navigation
+refactor(utils): extract KPI calculations
 style: format with prettier
+docs: update task description
 ```
 
----
-
-## 11. Перевірки перед комітом
-
+**Перед комітом:**
 ```bash
-npm run lint       # ESLint перевірка
-npm run format     # Prettier форматування
-npm run build      # TypeScript компіляція + збірка
+npm run lint      # ESLint перевірка
+npm run format    # Prettier форматування
+npm run build     # TypeScript + збірка
 ```
-
-Всі три команди мають виконуватись без помилок.

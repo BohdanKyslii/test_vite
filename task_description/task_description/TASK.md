@@ -12,7 +12,7 @@
 
 | Поле       | Значення                                        |
 |------------|-------------------------------------------------|
-| Проект     | test_vite                                       |
+| Проект     | test_vite — Orders Dashboard                    |
 | Тип        | Bug / Enhancement / New Feature / Refactor      |
 | Пріоритет  | Low / Medium / High / Critical                  |
 | Статус     | In Progress / Done / Review                     |
@@ -29,7 +29,7 @@
 
 ## Опис
 
-> Детальний опис завдання. Що змінити, що додати, як має виглядати результат.
+> Детальний опис завдання.
 
 ---
 
@@ -43,28 +43,31 @@
 
 ### Компоненти (`src/components/`)
 - [ ] Props типізовані через `interface`
-- [ ] Без `any` типів
-- [ ] Tailwind для стилізації (без inline styles)
+- [ ] Без `any` типів — використовувати `as OrderStatus` якщо потрібно
+- [ ] Tailwind для стилізації — використовувати `TEXT` константи
 - [ ] Довжина рядка ≤ 80 символів
 
 ### Сторінки (`src/pages/`)
 - [ ] Зареєстровані в `src/App.tsx`
-- [ ] Стан завантаження та помилки оброблені
+- [ ] Всі хуки до першого `if` або `return`
+- [ ] Стани loading/error/empty через `<PageState />`
+- [ ] Пагінація через `useSearchParams` а не `useState`
+- [ ] Повернення назад через `navigate(-1)` а не `navigate('/path')`
 
 ### Хуки (`src/hooks/`)
-- [ ] Серверний стан — через `useQuery` / `useMutation`
+- [ ] Серверний стан через `useQuery` / `useMutation`
 - [ ] Інвалідація кешу після мутацій
 
 ### Сервіси (`src/services/`)
-- [ ] Fetch функції винесені з компонентів
-- [ ] Помилки кидаються через `throw new Error(...)`
+- [ ] Функції винесені з компонентів
+- [ ] Помилки через `throw new Error(...)`
 
 ### Типи (`src/types/`)
-- [ ] Нові інтерфейси додані у відповідний файл
+- [ ] Нові інтерфейси в `order.ts`
 
 ---
 
-## Критерії прийняття (Acceptance Criteria)
+## Критерії прийняття
 
 - [ ] Функціонал працює у браузері
 - [ ] Немає TypeScript помилок (`npm run build`)
@@ -80,4 +83,4 @@
 - [ ] `npm run lint` — без помилок
 - [ ] `npm run format` — застосовано
 - [ ] `npm run build` — успішна збірка
-- [ ] Коміт за Conventional Commits: `feat/fix/refactor(scope): description`
+- [ ] Коміт: `feat/fix/refactor(scope): description`
